@@ -21,7 +21,7 @@ All the script's modules have version info attached. This can be accessed by usi
 
 ./autoBackup -v
 
-for the version number or
+or
 
 ./autoBackup -vV
 
