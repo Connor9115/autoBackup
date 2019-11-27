@@ -13,11 +13,11 @@ To run the setup simply run the script called "autoBackup" (without quotes). To 
 The autoBackupSetup script should NOT be run manually, you will be prompted to run it if you run the autoBackup script.
 If the user opts to not run the setup script when prompted the main script will still function, but will fallback on backing up the user's home directory.
 
-## Code Comments
-Please forgive the awful comments, this script was meant to be read by people without much knowledge of shell scripting.
-
 ## Multiple instances
 The script will not allow more then one instance of itself at a time.
+
+## Code Comments
+Please forgive the awful comments, this script was meant to be read by people without much knowledge of shell scripting.
 
 ## Version info
 All the script's modules have version info attached. This can be accessed by using the command 
