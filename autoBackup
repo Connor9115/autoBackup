@@ -1,0 +1,243 @@
+#!/bin/bash
+# OLD Purpose: To act as the main script for doing everything bar the changing of the backup dir (handled in autoBackupSetup)
+# NEW Purpose: To act as the central hub for all other MODULES in the script. To also act as the launcher for all the setups
+
+# ALL MODULES ARE READY FOR UPLOAD TO GITHUB
+
+# Version information
+ver="1.0"
+exVer=$(
+	echo "$ver - Major version. Release notes:"
+	echo $'\t+ Use of modules has made the whole setup and usage process far easier'
+	echo $'\t+ Can no longer run more then one instance of autoBackup at a time to avoid var collisions etc.'
+	echo $'\t+ Added small changes to strings to improve readability'
+	echo $'\t+ Can now read backup log file, remove autoBackup cronjobs, delete config files/backups, and manage (extract or list) your backups all from within the script'
+)
+
+# Here we create our global variables (variables (vars) that can be used all throughout the script)
+# This first var just finds what directory (dir) it's in and adds the follow text to it
+workingDir=$(echo "$(pwd)/allBackups")
+count=0
+BACKUPDIR="NA"
+isFirst="false"
+runSetupTF="false"
+bypassSafeCheck="false"
+runSetup="n"
+confirmDelMenu="false"
+fin="false"
+vne="false"
+verbose="false"
+
+while getopts vVp: option
+do
+	case "${option}"
+	in
+		v) vne="true";;
+		V) verbose="true";;
+		p) preOption=${OPTARG};;
+	esac
+done
+
+# Check if module was called with either version info optarg
+if [ $vne == "true" ]; then
+	[ $verbose == "false" ] && echo -e "$ver"
+	[ $verbose == "true" ] && echo -e "$exVer"
+	exit
+fi
+
+# Are we already running?
+sbsRun=$(pgrep -c autoBackup)
+[ "$sbsRun" != "1" ] && echo "There is already an instance of autoBackup running. Exiting..." && exit 1
+
+# Keeping with variable creation, here we create some variables, output (>) or append (>>) them to a file, then read those vars in
+if [ ! -e $workingDir ]; then { mkdir -p "$workingDir"; echo "BACKUPDIR=NA" > $workingDir/publicVars; echo $'isFirst=true' >> $workingDir/publicVars; echo "isFirstSetup=true" >> $workingDir/publicVars; } fi
+source $workingDir/publicVars
+
+# Now just some simple first run checks
+while [ $fin != "true" ]
+do
+	clear && [[ $isFirst == "true" && $isFirstSetup == "true" ]] && echo -n "It was detected this is the first run. The setup script also wasn't run. Do you want to run it now? [Y/n]: " && read runSetup
+	[[ "$runSetup" == "n" || "$runSetup" == "no" || "$runSetup" == "y" || "$runSetup" == "yes" || "$runSetup" == "" ]] && fin="true"
+done
+
+# Setting up a few functions for later...
+function recoveryMenu {
+	recMenu="true"
+	recType=""
+	while [ $recMenu != "false" ]
+	do
+		clear
+		recMenu="false"
+		echo "Manage what?"
+		echo -e "\t1. Incremental\n\t2. Full\n\t3. Exit"
+		echo -n "TYPE: " && read recOpt
+		case $recOpt in
+			1) recType="i";;
+			2) recType="f";;
+			3) echo "EXIT" && exit;;
+			*) recMenu="true";;
+		esac
+	done
+
+	recMenuLs="true"
+	while [ $recMenuLs != "false" ]
+	do
+		clear
+		echo "Operate on what backup? (Type help for more info)"
+		prefix="NA"
+		recMenuLs="false"
+		[ $recType == "i" ] && prefix="inc" && ls -1 $workingDir/incBackup*.tar | cat -n -
+		[ $recType == "f" ] && prefix="full" && ls -1 $workingDir/fullBackup*.tar | cat -n -
+		# [ $? != 0 ] && echo "No backups of that type were found." && exit 1
+		[ "$displayHelp" == "true" ] && echo "Input the number that corrisponds with the backup you want to manage followed by an e for extract or l for list, or both." && displayHelp="false"
+		echo -n "TYPE->WHICH: " && read bacOpt && bacOpt=$(echo $bacOpt | awk '{print tolower($0)}')
+		numBacOpt=$(echo $bacOpt | tr -d 'e' | tr -d 'l')
+		charBacOpt=$(echo $bacOpt | tr -d '[:digit:]')
+		case $numBacOpt in
+			1) whichBackup="$workingDir/$prefix Backup1.tar";;
+			2) whichBackup="$workingDir/$prefix Backup2.tar";;
+			3) whichBackup="$workingDir/$prefix Backup3.tar";;
+			4) whichBackup="$workingDir/$prefix Backup4.tar";;
+			5) whichBackup="$workingDir/$prefix Backup5.tar";;
+			6) if [ -e "$workingDir/$prefix Backup5.tar" ]; then { whichBackup="$workingDir/$prefix Backup6.tar"; } else { recMenuLs="true"; } fi;;
+		esac
+		[ "$bacOpt" == "help" ] && recMenuLs="true" && displayHelp="true"
+		whichBackup=$(echo "$whichBackup" | sed -rn 's/(...) (Backup.\.tar)/\1\2/p')
+		[[ "$whichBackup" == "" || ! -e $whichBackup ]] && recMenuLs="true" && charBacOpt="NA" && multiOpt="true"
+		[[ "$charBacOpt" == "e" && "$charBacOpt" != "l" ]] && autoRecover -e $whichBackup
+		[[ "$charBacOpt" == "l" && "$charBacOpt" != "e" ]] && autoRecover -d $whichBackup
+		[[ "$charBacOpt" == "el" || "$charBacOpt" == "le" ]] && autoRecover -le $whichBackup && multiOpt="true"
+	done
+	echo -n "Enter to continue..." && read
+}
+
+function restoreUC {
+#	count=0
+#	testStringStart="# autoBackup cron jobs START"
+#	testStringEnd="# autoBackup cron jobs END"
+#	userCronTF="true"
+#	while IFS= read -r line
+#	do
+#		[ "$line" == "$testStringStart" ] && userCronTF="false"
+#		[ $userCronTF == "true" ] && let count++
+#	done < <(crontab -l)
+#	userCronTF="true"
+#	preABC=$count
+#	echo -e "$count \n\n"
+#	count="0" && count0="0"
+#	while IFS= read -r line
+#	do
+#		[ "$line" == "$testStringEnd" ] && userCronTF="false"
+#		[ $userCronTF == "true" ] && let count++
+#		[ "$preABC" > "$count0" ] && let count0++
+#	done < <(crontab -l)
+#	echo -e "$count0 \n\n"
+#	postABC=$(echo "$postABC-1" | bc)
+#	preABC=$(echo "$preABC-1" | bc)
+#	userCronPre=$(head -n $preABC <(crontab -l))
+#	userCronPost=$(tail -n $postABC <(crontab -l))
+#	userCron="$userCronPre$userCronPost"
+#	#[ "$userCron" != "" ] && echo "$userCron" | crontab -
+	userCronTF="true"
+	testString="# autoBackup cron jobs"
+	count=0
+	while IFS= read -r line
+	do
+		[ "$line" == "$testString" ] && userCronTF="false"
+		[ $userCronTF == "true" ] && let count++
+	done < <(crontab -l)
+	count=$(echo "$count-1" | bc)
+	userCron=$(crontab -l | head -n $count -)
+	[ "$userCron" != "" ] && echo "$userCron" | crontab -
+
+	count=0
+	for i in "${allDays[@]}"
+	do
+		declare -n day=${allDays[$count]}
+		if [ "${day[0]}" == "*" ]; then
+			crontab -l > tempCron && echo "0 ${day[1]} * * $count export workingDir=$(pwd)/allBackups && $(pwd)/autoBackupd &> $(pwd)/allBackups/cronBU.log" | cat tempCron - | crontab - && rm -rf tempCron
+		fi
+		let count++
+	done
+	echo -e "Crontab flush complete.\nYour crontab now looks like this:"
+	crontab -l
+	echo -ne "\nPress enter to continue..." && read
+}
+
+function mainMenu {
+	case $changeWhat in
+		1) runSetup="y" && bypassSafeCheck="true" && changeSelected="true";;
+		2) runSetup="n" && autoBackupDS && changeSelected="true";;
+		3) runSetup="n" && export bypassDayCheck="true" && changeSelected="true" && autoBackupd;;
+		4) runSetup="n" && recoveryMenu;;
+		5) runSetup="n" && restoreUC;;
+		6) runSetup="n" echo -e "All following modules have version info/release notes by giving the command the -v or -vV (extended info) options
+			autoBackup (this script, acts as a launcher/hub for all other modules)
+			autoBackupSetup (on first run sets up crontab, backup dir, and var files)
+			autoBackupDS (sets up when the backups should run via a customizable daemon table)
+			autoBackupd (logs the backups and is responsible for passing vars, like current day and how to backup, to autoBackupNOW)
+			autoRecover (recover items from backups, kinda speaks for itself)
+			autoBackupNOW (performs the backup with the flags given from autoBackupd)" && read -p "Press enter to continue...";;
+		7) less +r "$workingDir/backupLog";;
+		98) runSetup="n" && confirmDelMenu="true" && changeSelected="true";;
+		99) echo "EXIT" && exit;;
+		*) [ "$preOption" != "" ] && echo "Unknown option \"$preOption\" please see options before using this optarg." && exit 1;;
+	esac
+}
+
+if [ $isFirst == "false" ]; then
+	changeSelected="false"
+	# Here we come to the main menu (available after initial setup). This is a modular script thus many options are handled in another script
+	if [ "$preOption" == "" ]; then
+		while [ $changeSelected != "true" ]
+		do
+			clear && echo -e "Adjust which setting?"
+			if [ "$isFirstSetup" != "true" ]; then { echo "1. Change backup directory (Currently: \"$BACKUPDIR\")"; } else { echo "1. Run setup"; } fi
+			echo "2. Configure backup schedule"
+			echo "3. Force manual backup"
+			echo "4. Manage backups"
+			echo "5. Remove autoBackup cronjobs"
+			echo "6. Module list"
+			echo "7. Read backup log"
+			echo '98. Delete "allBackups" directory'
+			echo "99. Exit"
+			echo "-------------------------------------------------------------"
+			read -p "OPTION NUMBER: " changeWhat
+			echo "-------------------------------------------------------------"
+			mainMenu
+		done
+	else
+		changeWhat=$preOption
+		mainMenu
+	fi
+fi
+
+# Assuming runSetup (can have user input contents) wasn't artifically changed by options menu, it will run the setup script (on non-first run this will instead just change the backup directory)
+if [[ "$runSetup" != "n" && "$runSetup" != "no" ]]; then { runSetupTF="true" && autoBackupSetup && source $workingDir/publicVars; } fi
+
+# Yeah I know, looks confusing. First there are 3 lines in the publicVars files. We copy the last line then the first line as well. Now put that first line back in the public vars file, overwriting it. Now append the text "isFirst=false" to the var file. Last, append the last line copied in the beginning.
+[ "$isFirst" == "true" ] && tail -n 1 $workingDir/publicVars > temp0 && head -n 1 $workingDir/publicVars > temp1 && mv temp1 $workingDir/publicVars && echo "isFirst=false" >> $workingDir/publicVars && cat $workingDir/publicVars temp0 > temp1 && mv temp1 $workingDir/publicVars && rm -f temp0
+
+if [ $confirmDelMenu == "true" ]; then
+	# You can only get into here if you select the "Delete allBackups directory" option in the main menu
+	absoluteYesGiven="false"
+	while [ $absoluteYesGiven == "false" ]
+	do
+		echo "This action will remove ALL backups and config files. Are you sure? [y/N]" && read maybeYes
+		maybeYes=$(echo "$maybeYes" | awk '{print tolower($0)}')
+		if [[ "$maybeYes" == "y" || "$maybeYes" == "yes" ]]; then
+			echo -e "Input was \"$maybeYes\". Are you absolutely sure you want to delete ALL your backups, incremental AND full? [y/N]"
+			read absoluteYes
+			absoluteYes=$(echo "$absoluteYes" | awk '{print tolower($0)}')
+			if [[ "$absoluteYes" == "y" || "$absoluteYes" == "yes" ]]; then
+				echo "Absolute yes was given. Proceeding with the removal operation..." && absoluteYesGiven="true"
+			else
+				echo "Cowardly backing out of the removal process last minute. Nothing will be deleted." && exit
+			fi
+		else
+			echo $'Input not "y" or "yes". Will NOT delete anything.\nExiting...' && exit
+		fi
+	done
+	rm -rf "$workingDir/../allBackups"
+	echo "All config and backup files deleted. Will assume first run next time."
+fi

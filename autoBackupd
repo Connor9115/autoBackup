@@ -1,0 +1,142 @@
+#!/bin/bash
+ver="1.0"
+exVer=$(
+	echo "$ver - Major version. Release notes:"
+	echo $'\t+ Elapsed time now in millieseconds (instead of seconds)'
+	echo $'\t+ Added feature to recreate "base" incremental at every 5th backup'
+	echo $'\t+ Now starts from cron, not init'
+	echo $'\t+ Fixed issue where automatic backups would create rogue files'
+	echo $'\t+ Fixed issue where automatic backups wouldn\'t actually backup anything'
+)
+
+# FINALLY FIXED THE ISSUE WHERE AUTO-BACKUPS WOULDN'T BACKUP ANYTHING, turned out to be a problem with variable calls/exports in various areas
+
+# Create globals and read in vars from var files
+[ "$workingDir" == "" ] && workingDir=$(echo $(pwd)/allBackups)
+count=0
+dayNow=$(echo "$(date +%a)" | awk '{print toupper($0)}')
+backupType=" NA "
+passedDay="BYPASS"
+vne="false"
+verbose="false"
+
+while getopts vV option
+do
+	case "${option}"
+	in
+		v) vne="true";;
+		V) verbose="true";;
+	esac
+done
+
+# Check if module was called with either version info optarg
+if [ $vne == "true" ]; then
+	[ $verbose == "false" ] && echo -e "$ver"
+	[ $verbose == "true" ] && echo -e "$exVer"
+	exit
+fi
+
+source $workingDir/publicVars
+if [ ! -e $workingDir/daemonVars ]; then
+	touch $workingDir/daemonVars; echo "isFirstDaemon=true" > $workingDir/daemonVars; echo "countDay=0" >> $workingDir/daemonVars
+fi
+source $workingDir/daemonVars
+if [ $isFirstDaemon == "true" ]; then
+	echo "isFirstDaemon=false" > $workingDir/daemonVars; echo "countDay=0" >> $workingDir/daemonVars
+fi
+[ -e $workingDir/daemonTableVars ] && source $workingDir/daemonTableVars
+
+[ "$passedDay" != "" ] && passedDay=$dayNow
+declare -n day=$passedDay
+#[[ "${day[0]}" == "-" && "$bypassDayCheck" == "" ]] && echo -e "\nBACKUP LOG START\n$(date)\nSkip-backup flag given from daemon table. Skipping day.\nBACKUP LOG END" >> $workingDir/backupLog && exit
+
+# This will have the script recreate a new base backup for the incrementals
+[ "$countDay" == "5" ] && rm $workingDir/metaBackup.snar
+
+function checkIncr {
+	if [[ -e $workingDir/incBackup5.tar && $isFirstDaemon == "false" ]]; then { mv $workingDir/incBackup5.tar $workingDir/incBackup6.tar; echo "Replacement 5 into 6 completed successfully on $(date)"; } elif [[ ! -e $workingDir/incBackup5.tar && $isFirstDaemon == "false" ]]; then { touch $workingDir/incBackup5.tar; echo "WARNING: incBackup5.tar did not exist. But a new one has been created."; let count++; } fi
+	if [[ -e $workingDir/incBackup4.tar && $isFirstDaemon == "false" ]]; then { mv $workingDir/incBackup4.tar $workingDir/incBackup5.tar; echo "Replacement 4 into 5 completed successfully on $(date)"; } elif [[ ! -e $workingDir/incBackup4.tar && $isFirstDaemon == "false" ]]; then { touch $workingDir/incBackup4.tar; echo "WARNING: incBackup4.tar did not exist. But a new one has been created."; let count++; } fi
+	if [[ -e $workingDir/incBackup3.tar && $isFirstDaemon == "false" ]]; then { mv $workingDir/incBackup3.tar $workingDir/incBackup4.tar; echo "Replacement 3 into 4 completed successfully on $(date)"; } elif [[ ! -e $workingDir/incBackup3.tar && $isFirstDaemon == "false" ]]; then { touch $workingDir/incBackup3.tar; echo "WARNING: incBackup3.tar did not exist. But a new one has been created."; let count++; } fi
+	if [[ -e $workingDir/incBackup2.tar && $isFirstDaemon == "false" ]]; then { mv $workingDir/incBackup2.tar $workingDir/incBackup3.tar; echo "Replacement 2 into 3 completed successfully on $(date)"; } elif [[ ! -e $workingDir/incBackup2.tar && $isFirstDaemon == "false" ]]; then { touch $workingDir/incBackup2.tar; echo "WARNING: incBackup2.tar did not exist. But a new one has been created."; let count++; } fi
+	if [[ -e $workingDir/incBackup1.tar && $isFirstDaemon == "false" ]]; then { mv $workingDir/incBackup1.tar $workingDir/incBackup2.tar; echo "Replacement 1 into 2 completed successfully on $(date)"; } elif [[ ! -e $workingDir/incBackup1.tar && $isFirstDaemon == "false" ]]; then { touch $workingDir/incBackup1.tar; echo "WARNING: incBackup1.tar did not exist. But a new one has been created."; echo ""; let count++; } fi
+}
+
+# Create a function that backs up and logs
+function backupNlog {
+	timerStart=$(echo $(($(date +%s%N)/1000000)))
+	logText=$(
+		echo ""
+		echo "BACKUP LOG START"
+		echo "Time start: $(date)"
+		[ "$bypassDayCheck" == "" ] && echo "Backup was: AUTOMATIC"
+		[ "$bypassDayCheck" != "" ] && echo "Backup was: MANUAL"
+		rm -rf $workingDir/incBackup6.tar
+		# Check if any incremental backups were moved or deleted from an external source. If so, log it and make a empty replacement
+		[[ "${day[2]}" == "I" && "$bypassDayCheck" == "" ]] && checkIncr
+		[[ "$backupType" == "INCR" && "$bypassDayCheck" != "" ]] && checkIncr
+
+		# Legacy feature, should never realistically occur in normal use
+		if [[ $count == "5" && $isFirstDaemon == "false" ]]; then { echo $'ALL INCREMENTAL BACKUPS NOT FOUND, Have you checked your full backups?\nThe preceeding message occured on ' >> $workingDir/publicVars; echo -n "$(date)" >> $workingDir/publicVars; } fi
+	)
+	echo "$logText" >> $workingDir/backupLog
+	if [ $BACKUPDIR != "NA" ]; then
+		echo $'Dirs and files backed up:' >> $workingDir/backupLog
+		[[ "${day[2]}" == "F" && "$backupType" == "" ]] && backupType="FULL"
+		[[ "${day[2]}" == "I" && "$backupType" == "" ]] && backupType="INCR"
+		[ "$backupType" != " NA " ] && export backupType
+		[ "$backupType" == " NA " ] && echo "ERROR: No backup type provided from daemon table! CANNOT PROCEED!" >> $workingDir/backupLog && exit 1
+		[ "$BACKUPDIR" != "" ] && export BACKUPDIR && export workingDir
+		[ "$BACKUPDIR" == "" ] && echo "ERROR: No backup path provided from autoBackupSetup! (What magic did you use to see this, please contact me.)" >> $workingDir/backupLog && exit 1
+		$workingDir/../autoBackupNOW
+		[ $backupType == "INCR" ] && let countDay++
+	else
+		echo "Backup path not set. Defaulting to backing up the users home directory. To change this, run the autoBackup script and select the \"Change backup directory\" option."
+		[[ "${day[2]}" == "F" && "$backupType" == "" ]] && backupType="FULL"
+		[[ "${day[2]}" == "I" && "$backupType" == "" ]] && backupType="INCR"
+		[ "$backupType" != " NA " ] && export backupType && export workingDir
+		[ "$backupType" == " NA " ] && echo "ERROR: No backup type provided from daemon table!" >> $workingDir/backupLog && exit 1
+		$workingDir/../autoBackupNOW
+		let countDay++
+	fi
+
+	echo "Time end: $(date)" >> $workingDir/backupLog
+	timerEnd=$(echo $(($(date +%s%N)/1000000)))
+	let timeElapsed=$timerEnd-$timerStart
+	echo "Total elapsed time (in millieseconds): $timeElapsed" >> $workingDir/backupLog
+	echo "BACKUP LOG END" >> $workingDir/backupLog
+
+	storLoc="       Current partition       "
+	if [[ $workingDir/.. == /mnt* || $workingDir/.. == /dev* ]]; then { storLoc="   Second drive / partition    "; } fi
+	if [ "$isFirstDaemon" == "true" ]; then
+		echo " \\__________________________________/ \\_______________________/ \\_____________________________/ \\__________________/" | cat - $workingDir/backupLog > temp && mv temp $workingDir/backupLog
+		echo "|         Date, day, and time        |       Backup type       |       Storage locaction       |      Operation     |" | cat - $workingDir/backupLog > temp && mv temp $workingDir/backupLog
+		echo "|------------------------------------|-------------------------|-------------------------------|--------------------|" | cat - $workingDir/backupLog > temp && mv temp $workingDir/backupLog
+	fi
+	echo "|  $(date)  |           $backupType          |$storLoc|       BACKUP       |" | cat - $workingDir/backupLog > temp && mv temp $workingDir/backupLog
+	echo "|------------------------------------|-------------------------|-------------------------------|--------------------|" | cat - $workingDir/backupLog > temp && mv temp $workingDir/backupLog
+}
+
+if [ "$bypassDayCheck" == "" ]; then
+	case $dayNow in
+		SUN) export passedDay="SUN" && backupNlog;;
+		MON) export passedDay="MON" && backupNlog;;
+		TUE) export passedDay="TUE" && backupNlog;;
+		WED) export passedDay="WED" && backupNlog;;
+		THU) export passedDay="THU" && backupNlog;;
+		FRI) export passedDay="FRI" && backupNlog;;
+		SAT) export passedDay="SAT" && backupNlog;;
+	esac
+else
+	fin="false"
+	while [ $fin != "true" ]
+	do
+		echo -n "Type of backup? [[F]ull/[i]ncr]: " && read BUtype
+		[[ $BUtype == "f" || $BUtype == "i" || $BUtype == "full" || $BUtype == "incr" || $BUtype == "" ]] && fin="true"
+		[[ $BUtype == "f" || $BUtype == "i" || $BUtype == "full" || $BUtype == "incr" || $BUtype == "" ]] || echo -e "Unknown option...\n"
+		[[ $BUtype == "f" || $BUtype == "full" || $BUtype == "" ]] && backupType="FULL" && backupNlog
+		[[ $BUtype == "i" || $BUtype == "incr" ]] && backupType="INCR" && backupNlog
+	done
+fi
+
+hed=$(head -n 1 $workingDir/daemonVars)
+echo "$hed" > $workingDir/daemonVars && echo "countDay=$countDay" >> $workingDir/daemonVars

@@ -1,0 +1,93 @@
+#!/bin/bash
+# Default mode: list
+# e mode: Extract (replace defaut mode)
+# l mode: Force List (even if in e mode, list backup contents. If not in e mode, this flag is useless)
+# q mode: Quite mode (formerly Shhhhhhh and/or hush mode) will try and suppress the output of all commands, including those sent to stderr
+#	: exHush if list was called with hush, a non-verbose run of tar --list will be run and autoRecover will try and honor the -q tag
+# V mode: Print version info. If verbose is called with it, it will print extended info including a todo list
+# v mode: Verbose mode. You know what this does
+
+# TODO: Have a way to auto turn first run mode off (using publicVars)
+
+ver='1.1'
+exVer="$ver - First working major version with all necessary features. Release Notes:\\n\\t+ Fixed detection of the current partion\\n\\t+ Added comments to code"
+
+# Global var creation
+vne="false"
+verbose="false"
+defaultMode="true"
+extractMode="false"
+forceListMode="false"
+shhMode="false"
+backupPath=""
+path=""
+firstRun="false"
+
+# optarg handling, handling of the -'s used after the autoRecover command (you'll see these used by other scripts all the time because of it's POSIX compliance)
+# The text in the below line, after getopts and before option is known as the "optarg string" if a charactor has a : after it, that means it requires an arguement after it as well.
+while getopts vVqle:d: option
+do
+	case "${option}"
+	in
+		e) extractMode="true" && defaultMode="false" && backupPath=${OPTARG};;
+		l) forceListMode="true";;
+		q) shhMode="true";;
+		d) path=${OPTARG};;
+		V) vne="true";;
+		v) verbose="true";;
+	esac
+done
+
+# Check if module was called with either version info optarg
+if [ $vne == "true" ]; then
+	[ $verbose == "false" ] && echo -e "$ver"
+	[ $verbose == "true" ] && echo -e "$exVer"
+	exit
+fi
+
+# if the script was called with -d and -e, it would cause issues later on so we prevent that here. This will exit with non-zero exit code (1) and print the error text to stderr
+[[ "$path" != "" && $extractMode == "true" ]] && echo $'ERROR: Explicit directory specifications should not be used when extract mode is used.\nExiting...' >&2 && exit 3
+
+# The path var (in this case) would be where the inc backup and the snar file (file used to identify whether a file/dir is new or not) should be stored in the same location so here we just take the users path to the backup then remove the file name from the path and replace it with the .snar file's file name
+metaPath=$(echo "$path" | sed -rn 's/(.*)\/.*/\1/p')
+[ "$metaPath" == "" ] && metaPath=$(pwd)
+
+if [ $shhMode == "false" ]; then
+	[ $extractMode == "true" ] && echo "Operating on $backupPath"
+	[[ $extractMode == "false" && "$path" != "" ]] && echo -e "Operating on \n  $path\nwith\n  $metaPath/metaBackup.snar\n"
+	[[ $extractMode == "false" && "$path" == "" ]] && read -p "Path not specified in optargs. Using an absolute path, where are we operating? " -e path && echo "Operating on $path"
+fi
+# The line of code under this comment just adds support for legacy code written before file extraction was introduced
+[ "$backupPath" != "" ] && path=$backupPath
+
+# Was extract mode called or was it list mode or list mode and extract mode?
+if [[ $defaultMode == "true" || $forceListMode == "true" ]]; then
+	[ $defaultMode == "false" ] && echo $'\nLIST:'
+	[[ "$path" != "" && $shhMode == "false" ]] && tar --list -vg $metaPath/metaBackup.snar --file=$path
+	[[ "$path" != "" && $shhMode == "true" ]] && tar --list -g $metaPath/metaBackup.snar --file=$path &> /dev/null
+fi
+if [ $defaultMode == "false" ]; then
+	[ $shhMode == "false" ] && echo $'\nEXTRACTED:'
+	[[ $extractMode == "true" && $shhMode == "false" ]] && tar --extract -vvg /dev/null --file=$path
+fi
+[[ $extractMode == "true" && $shhMode == "true" ]] && tar --extract -vvg /dev/null --file=$path &> /dev/null
+[ $shhMode == "false" ] && echo ""
+
+# Now that everything has been handled we log it if we did an extract operation, doing this for list operations is pointless
+storLoc="       Current partition       "
+if [[ $(pwd) == /mnt* || $(pwd) == /dev* || $(pwd) == /dev/media* ]]; then { storLoc="   Second drive / partition   "; } fi
+[ "$backupPath" == "" ] && backupPath=$path
+backupPath="$metaPath/allBackups"
+
+if [ "$extractMode" == "true" ]; then
+	if [ $firstRun == "true" ]; then
+		storLoc="       Current partition       "
+		[[ $(pwd) == /mnt* || $(pwd) == /dev* ]] && storLoc="   Second drive / partition    "
+		[ ! -e $backupPath/backupLog ] && touch $backupPath/backupLog
+		echo " \\__________________________________/ \\_______________________/ \\_____________________________/ \\__________________/" | cat - $backupPath/backupLog > $backupPath/temp && mv $backupPath/temp $backupPath/backupLog
+		echo "|         Date, day, and time        |       Backup type       |       Storage locaction       |      Operation     |" | cat - $backupPath/backupLog > $backupPath/temp && mv $backupPath/temp $backupPath/backupLog
+		echo "|------------------------------------|-------------------------|-------------------------------|--------------------|" | cat - $backupPath/backupLog > $backupPath/temp && mv $backupPath/temp $backupPath/backupLog
+	fi
+	echo "|  $(date)  |            NA           |$storLoc|      RECOVERY      |" | cat - $backupPath/backupLog > $backupPath/temp && mv $backupPath/temp $backupPath/backupLog
+	echo "|------------------------------------|-------------------------|-------------------------------|--------------------|" | cat - $backupPath/backupLog > $backupPath/temp && mv $backupPath/temp $backupPath/backupLog
+fi

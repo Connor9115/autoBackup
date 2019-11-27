@@ -1,0 +1,304 @@
+#!/bin/bash
+# Time is always "o'clock" e.g. the user enters in 16 for 4:00pm
+
+ver="1.0"
+exVer=$(
+	echo "$ver - Major version. Release notes:"
+	echo $'\t+ Added comments'
+	echo $'\t+ Added help text to "DAY->OPTION->TIME: " prompt'
+	echo $'\t+ Added a line to display whether the user has autoBackup cronjobs installed or not'
+	echo $'\t+ Added "save" option to "DAY: " prompt and updated help text to include it'
+)
+
+# Creating global vars and reading in var files
+fin="false"
+confirmOpen="false"
+option=""
+allDays=( "SUN" "MON" "TUE" "WED" "THU" "FRI" "SAT" )
+workingDir="$(pwd)/allBackups/daemonTableVars"
+workingDirOnly="$(pwd)/allBackups/"
+vne="false"
+verbose="false"
+
+while getopts vV option
+do
+	case "${option}"
+	in
+		v) vne="true";;
+		V) verbose="true";;
+	esac
+done
+
+# Check if module was called with either version info optarg
+if [ $vne == "true" ]; then
+	[ $verbose == "false" ] && echo -e "$ver"
+	[ $verbose == "true" ] && echo -e "$exVer"
+	exit
+fi
+
+function save {
+	echo -e "SUN=( \"${SUN[0]}\" \"${SUN[1]}\" \"${SUN[2]}\" )\nMON=( \"${MON[0]}\" \"${MON[1]}\" \"${MON[2]}\" )\nTUE=( \"${TUE[0]}\" \"${TUE[1]}\" \"${TUE[2]}\" )\nWED=( \"${WED[0]}\" \"${WED[1]}\" \"${WED[2]}\" )\nTHU=( \"${THU[0]}\" \"${THU[1]}\" \"${THU[2]}\" )\nFRI=( \"${FRI[0]}\" \"${FRI[1]}\" \"${FRI[2]}\" )\nSAT=( \"${SAT[0]}\" \"${SAT[1]}\" \"${SAT[2]}\" )" > $workingDir
+	echo "Exporting time settings to crontab..."
+	crontab -l > tempCron && echo -e "# DO NOT put any jobs after this. Put your jobs before the previous comment\n# autoBackup cron jobs" | cat tempCron - | crontab - && rm -rf tempCron
+	# ssmbs
+	userCronTF="true"
+	testString="# autoBackup cron jobs"
+	count=0
+	while IFS= read -r line
+	do
+		[ "$line" == "$testString" ] && userCronTF="false"
+		[ $userCronTF == "true" ] && let count++
+	done < <(crontab -l)
+	count=$(echo "$count+1" | bc)
+	userCron=$(crontab -l | head -n $count -)
+	[ "$userCron" != "" ] && echo "$userCron" | crontab -
+
+	count=0
+	for i in "${allDays[@]}"
+	do
+		declare -n day=${allDays[$count]}
+		if [ "${day[0]}" == "*" ]; then
+			crontab -l > tempCron && echo "0 ${day[1]} * * $count export workingDir=$(pwd)/allBackups && $(pwd)/autoBackupd &> $(pwd)/allBackups/cronBU.log" | cat tempCron - | crontab - && rm -rf tempCron
+		fi
+		let count++
+	done
+}
+
+# Our simple first run checks
+if [ ! -e $workingDir ]; then
+	while [ $confirmOpen != "true" ]
+	do
+		confirmOpen="true"
+		echo -n "This is likely the first run. Do you want to create the required files [Y/n/why]: " && read createFiles
+		if [[ "$createFiles" == "y" || "$createFiles" == "yes" || "$createFiles" == "" ]]; then
+			mkdir -p $workingDirOnly && touch $workingDir
+			echo $'SUN=( "-" "00" "I" )\nMON=( "-" "00" "I" )\nTUE=( "-" "00" "I" )\nWED=( "-" "00" "I" )\nTHU=( "-" "00" "I" )\nFRI=( "-" "00" "I" )\nSAT=( "-" "00" "F" )' > $workingDir
+			# If the user says no to creating required files and thus the daemon table, we exit with non-zero exit status (2) we use 2 here so it doesn't interfere with our error checking (that is, if something bad and unknown happens, exit with non-zero exit status (1); else another exit status will likely get used)
+		elif [[ "$createFiles" == "n" || "$createFiles" == "no" ]]; then
+			exit 2
+		elif [ "$createFiles" == "why" ]; then
+			echo "The file \"daemonTableVars\" was not located in directory \"$workingDirOnly\". This contains all the arrays needed for the daemon table. If this isn't your first time running this script, is this the directory you first ran it in?"
+			confirmOpen="false"
+		else
+			echo "Unknown input: $createFiles"
+			confirmOpen="false"
+		fi
+	done
+fi
+
+source $workingDir
+# Here we loop our menu until the user requests to exit (or the interrupt signal is given, obviously)
+while [ $fin == "false" ]
+do
+	clear && echo $'Enter the first three charactors of any day to change its values.\nType help at anytime to see commands relative to that section.'
+
+	# IT'S NOT THAT COMPLEX I SWEAR! All the following line does is simply checking for differences between the buffered arrays (that is, ones that the user is currently editing before they write it to the file) if any are found we know that the user has modified the table and thus it differs from the saved values in the file so therefore the buffered array is not saved
+	notSaved=$(diff -q $workingDir <(echo -e "SUN=( \"${SUN[0]}\" \"${SUN[1]}\" \"${SUN[2]}\" )\nMON=( \"${MON[0]}\" \"${MON[1]}\" \"${MON[2]}\" )\nTUE=( \"${TUE[0]}\" \"${TUE[1]}\" \"${TUE[2]}\" )\nWED=( \"${WED[0]}\" \"${WED[1]}\" \"${WED[2]}\" )\nTHU=( \"${THU[0]}\" \"${THU[1]}\" \"${THU[2]}\" )\nFRI=( \"${FRI[0]}\" \"${FRI[1]}\" \"${FRI[2]}\" )\nSAT=( \"${SAT[0]}\" \"${SAT[1]}\" \"${SAT[2]}\" )"))
+
+	# Fun fact: this table was originally going to be part of the "daemonTableVars" file, the name of the file used to be a referrence to it relating to the daemon (hence daemon) while the second word (table) was a referrence to the table that was going to be in it and the vars part was because it was the file with the vars in it. Now it's the var file for the "daemonTable" hence daemonTableVars. This was so I could save lines in this file... before I realized how much of a pain it would be to read it in and write to the file (especially creating it)
+	echo '/---------------------\'
+	echo "| ${SUN[0]} SUN    ${SUN[1]}    ${SUN[2]}    |"
+	echo "| ${MON[0]} MON    ${MON[1]}    ${MON[2]}    |"
+	echo "| ${TUE[0]} TUE    ${TUE[1]}    ${TUE[2]}    |"
+	echo "| ${WED[0]} WED    ${WED[1]}    ${WED[2]}    |"
+	echo "| ${THU[0]} THU    ${THU[1]}    ${THU[2]}    |"
+	echo "| ${FRI[0]} FRI    ${FRI[1]}    ${FRI[2]}    |"
+	echo "| ${SAT[0]} SAT    ${SAT[1]}    ${SAT[2]}    |"
+	echo '\---------------------/'
+
+	[ "$notSaved" != "" ] && echo $'\nTable not saved!'
+	[ "$notSaved" == "" ] && echo $'\nTable identical to original.'
+	userCronTF="true"
+	testString="# autoBackup cron jobs"
+	while IFS= read -r line
+	do
+		[ "$line" == "$testString" ] && userCronTF="false"
+	done < <(crontab -l)
+	[ $userCronTF == "false" ] && echo "Cron jobs: INSTALLED"
+	[ $userCronTF == "true" ] && echo "Cron jobs: NOT INSTALLED"
+	# FYI calling echo with the -n optarg will print the given text but not append a newline char to the end
+	echo -n $'DAY: ' && read option
+	echo -n "Selected: "
+	option=$(echo "$option" | awk '{print toupper($0)}' | sed 's/ //g')
+	case $option in
+		SUN | MON | TUE | WED | THU | FRI | SAT | ALL)
+			if [ "$option" == "SUN" ]; then
+				echo "SUNDAY"
+			elif [ "$option" == "MON" ]; then
+				echo "MONDAY"
+			elif [ "$option" == "TUE" ]; then
+				echo "TUESDAY"
+			elif [ "$option" == "WED" ]; then
+				echo "WEDNESDAY"
+			elif [ "$option" == "THU" ]; then
+				echo "THURSDAY"
+			elif [ "$option" == "FRI" ]; then
+				echo "FRIDAY"
+			elif [ "$option" == "SAT" ]; then
+				echo "SATURDAY"
+			elif [ "$option" == "ALL" ]; then
+				echo "ALL DAYS"
+			fi
+			echo -n "DAY->OPTION: " && read arrPos
+			# The following line just sanitizes user input (removes spaces and converts the input to upper case), then we use it in determining what option was selected
+			arrPos=$(echo "$arrPos" | awk '{print toupper($0)}' | sed 's/ //g')
+				case $arrPos in
+					1)
+						# The following line is actually a not statement, i.e if the user entered "ALL" do NOT do what's after the || else do it. The same thing could be achieved with the following statement [ $option != "ALL" ] && code
+						[ $option == "ALL" ] || declare -n day=$option
+						if [ "$option" == "ALL" ]; then
+							count=0
+							# Run through every day in the week doing what's between the do...done
+							for i in "${allDays[@]}"
+							do
+								declare -n day=${allDays[$count]}
+								if [ "${day[0]}" == "-" ]; then
+									day[0]=$(echo "*")
+								else
+									day[0]=$(echo "-")
+								fi
+								let count++
+							done
+						else
+							if [ "${day[0]}" == "-" ]; then
+								eval day[0]=$(echo "*")
+							else
+								eval day[0]=$(echo "-")
+							fi
+						fi
+						;;
+					2)
+						fin="false"
+						while [ $fin != "true" ]
+						do
+							echo $'What time do you want the backup run? (24 hour time. o\'clock only. See more in the help section on the previous menu)'
+							echo -n "DAY->OPTION->TIME: " && read backupTime
+							# All this says to do is remove any letters and spaces from the user input e.g the input "adlv rev7 8ea7vta" would be 787. If the filter returns nothing it was obviously on letters (e.g "BACK" -> "") so we make filter an out of range value so we get an error if the non-numerical input was not either BACK or HELP
+							filter=$(echo "$backupTime" | sed -rn 's/[a-z]*([0-9]*)[a-z]*/\1/gp' | sed 's/ //g')
+							filter0=$(echo "$filter" | sed -rn 's/^([0-9])$/0\1/p')
+							# If the previous filter got a hit, the original filter is obsolete - so replace it
+							[ "$filter0" != "" ] && filter=$filter0
+							[ "$filter" == "" ] && filter="24"
+							isZero=$(echo "$filter == 00" | bc)
+							isLess=$(echo "$filter <= 23" | bc)
+							isGreat=$(echo "$filter >= 00" | bc)
+							backupTime=$(echo "$backupTime" | awk '{print toupper($0)}' | sed 's/ //g')
+							[ "$isZero" == "1" ] && filter="00"
+							if [[ "$backupTime" != "HELP" && "$backupTime" != "BACK" ]]; then
+								[ "$option" == "ALL" ] || declare -n day=$option
+								if [ "$option" == "ALL" ]; then
+									count=0
+									for i in "${allDays[@]}"
+									do
+										declare -n day=${allDays[$count]}
+										if [[ "$isLess" -eq 1 && "$isGreat" -eq 1 ]]; then
+											day[1]=$filter
+											fin="true"
+										else
+											[ $count == "0" ] && echo $'Input not within range (24 hours, 00-23).\nPress enter to continue...' && read
+										fi
+										let count++
+									done
+								else
+									[[ "$isLess" -eq 1 && "$isGreat" -eq 1 ]] && day[1]=$filter && fin="true"
+								fi
+							elif [ "$backupTime" == "BACK" ]; then
+								fin="true"
+							else
+								# The only way to get here is if the user entered HELP
+								helpTextTime=$(
+									echo $'Possible input: '
+									echo $'\t<Number from 00-23> - What time the daemon decides to backup, assuming you\'ve enabled that day (should display a * next to it). This is in 24 hour time where 00 is 12:00am and 23 is 11:00pm.'
+
+									echo $'\n\tback - Will go back up to the previous menu'
+									echo $'\thelp - Displays this text (press q to exit)'
+								)
+								# This just places all that text in a script called less (part of the GNU coreutils) so the text doesn't interfere with readabilty of the rest of the this script
+								echo "$helpTextTime" | less +r
+							fi
+						done
+						fin="false"
+						;;
+					3)
+						[ $option == "ALL" ] || declare -n day=$option
+						if [ "$option" == "ALL" ]; then
+							count=0
+							for i in "${allDays[@]}"
+							do
+								declare -n day=${allDays[$count]}
+								if [ "${day[2]}" == "I" ]; then
+									day[2]=$(echo -E "F")
+								else
+									day[2]=$(echo -E "I")
+								fi
+								let count++
+							done
+						else
+							if [ "${day[2]}" == "I" ]; then
+								eval day[2]=$(echo -E "F")
+							else
+								eval day[2]=$(echo -E "I")
+							fi
+						fi
+						;;
+					HELP)
+						helpTextDay=$(
+							echo $'Possible inputs:'
+							echo $'\t1 - Toggles whether or not to do anything on that day (represented by a - for don\'t or a * to do)'
+							echo $'\t2 - Changes the hour to check to run the backup (24 hour time). This can only be o\'clock values (e.g. a value of 16 would mean 4:00pm)'
+							echo $'\t3 - Toggles whether to do a full or an incremental backup (represented by a F and an I, respectivelly)'
+
+							echo $'\n\t<Anything> - By entering an unknown command (i.e. one that\'s not indexed, including a return char/null value) will go back up to the previous menu'
+							echo "\thelp - Displays this text (press q to exit)"
+						)
+						echo "$helpTextDay" | less +r
+						;;
+					# The *) just means "anything that isn't indexted in this switch/case statement"
+					*)
+						echo $'Unknown option. Press enter to continue...'
+						read
+						;;
+				esac
+			;;
+
+		SAVE)
+			save
+			;;
+		HELP)
+			helpTextGeneral=$(
+				echo $'Possible inputs:'
+				echo $'\t<day of the week> - Load a day (Mon-Sun) for changes'
+				echo $'\tall - Load all days for changes'
+				echo $'\tsave - Writes the currently buffered daemon table to the daemon table\'s file and install new crontab'
+				echo $'\tdone - Will exit the script, writing any changes to the daemon table\'s file and install new crontab'
+				echo $'\texit - Will exit the script, will NOT write any changes to the daemon table\'s file or crontab'
+
+				echo $'\n\thelp - Displays this text (press q to exit)'
+
+				echo $'\n\tThis help can be called whenever the prompt adds a ->'
+			)
+			echo "$helpTextGeneral" | less +r
+			;;
+		DONE)	echo $'DONE\nWriting changes made to daemon table\'s file...' && fin="true" ;;
+		EXIT)
+
+			if [ "$notSaved" != "" ]; then
+				echo -n $'EXIT\nAre you sure you want to exit? This won\'t save changes made to the daemon table [y/N]: '
+				leave=""
+				read leave
+				[[ $leave == "y" || $leave == "yes" ]] && exit
+			else
+				echo 'EXIT'
+				echo "No changes made to table. Skipping exit confirmation." && exit
+			fi
+			;;
+		*)
+			echo "$option"
+			echo "Unknown option."
+			echo "Press enter to continue..."
+			read
+			;;
+	esac
+done
+# The only way to get here is via the user inputting DONE into the "DAY: " prompt
+save

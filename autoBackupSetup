@@ -1,0 +1,121 @@
+#!/bin/bash
+# if [ "$EUID" -ne "0" ]; then { echo "Can not start script because of permission errors. Are you running as root?"; exit; } fi
+# ^ That is the legacy way of handling root permissions (for startup file creation, init)
+
+ver="1.0"
+exVer="$ver - Major version now uses cronjobs (cronie) instead of init (no more sudo prompts) and therefore autoBackupd is no longer a daemon..\n\t..the vars, names, etc. that referrence daemon functionality shall be kept the same as changing them would do more harm than good."
+
+debugVer="true"
+workingDir="$(pwd)/allBackups"
+isFirstSetup="true"
+counter=0
+changeDir="false"
+fin=""
+vne="false"
+verbose="false"
+
+while getopts vV option
+do
+	case "${option}"
+	in
+		v) vne="true";;
+		V) verbose="true";;
+	esac
+done
+
+# Check if module was called with either version info optarg
+if [ $vne == "true" ]; then
+	[ $verbose == "false" ] && echo -e "$ver"
+	[ $verbose == "true" ] && echo -e "$exVer"
+	exit
+fi
+
+[ -e $workingDir/publicVars ] && source $workingDir/publicVars
+if [ "$bypassSafeCheck" != "true" ]; then
+	if [ $isFirstSetup == "true" ]; then
+		while [ "$fin" != "true" ]
+		do
+			echo -n $'Before anything is written, confirm you are aware all backup files will be created in the same location as the script (behind a directory called "allBackups").\nTHE SCRIPT SHOULD NEVER BE RUN IN THE SAME LOCATION AS THE DIRECTORY GETTING BACKED UP! [Y/n]: ' && read continueSafe
+			if [[ "$continueSafe" == "n" || "$continueSafe" == "no" ]]; then
+				echo "Make sure this script is in the directory your comfortable backing up to. Exiting..." && exit 1
+			else
+				echo -e "\nWhat parent directory do you want backed up?"
+				echo "By proceeding you acknowledge you want to write to this directory, press ctrl+c now if you don't."
+				changeDir="true"
+				fin="true"
+			fi
+		done
+		fin="false"
+	else
+		echo -n $'Do you wish to change your backup directory? [Y/n]: ' && read continueSafe
+		if [[ "$continueSafe" == "n" || "$continueSafe" == "no" ]]; then
+			echo "Will not change backup dir." && exit
+			# Why are you here?
+		else
+			changeDir="true"
+		fi
+	fi
+else
+	continueSafe="yes"
+	changeDir="true"
+fi
+while [ "$continueSafe" != "no" ]
+do
+	read -p 'BACKUP PATH: ' -e BACKUPDIR
+	# In *nix systems it is given that ~/ means the user's home dir (stored in $HOME) so here we just swap out ~/ with $HOME/ e.g ~/file0 -> /home/connor/file0 the first check is for ~/ while the other check is for ~/Path/to/other/dirs/or/files
+	homeCheck=$(echo "$BACKUPDIR" | sed -rn 's/~\/$/<++>/p')
+	homeCheckAnd=$(echo "$BACKUPDIR" | sed -rn 's/~\/(.*)/\1/p')
+	[ "$homeCheck" != "" ] && BACKUPDIR=$HOME
+	[ "$homeCheckAnd" != "" ] && BACKUPDIR="$HOME/$homeCheckAnd"
+	mkdir -p "$workingDir"
+	[ -e $workingDir/publicVars ] && head -n 2 $workingDir/publicVars > temp && mv temp $workingDir/publicVars && echo "isFirstSetup=false" >> $workingDir/publicVars
+	[ $BACKUPDIR != "" ] && continueSafe="no"
+	[ $BACKUPDIR == "" ] && echo "Backup directory can not be null"
+done
+
+if [ $isFirstSetup == "true" ]; then
+	echo -e "\nCreating required files and directories..."
+#	echo "Hold on there, we're gonna need root permissions for this (to add links to run at startup)"
+#	echo "If this terminal instance has not run sudo yet, you may be prompted to input your password"
+#	sudo mkdir -p "/etc/init.d"
+#	if [ $debugVer == "false" ]; then
+#		$?=1 >& /dev/null
+#		for (( counter=0; $? > 0; counter++ ))
+#		do
+#			sudo mkdir -p "/etc/rc.d"
+#			sudo mkdir "/etc/rc.d/rc$counter.d"
+#		done
+#	else
+#		sudo mkdir -p "/etc/rc.d/rc0.d"
+#		counter=0
+#	fi
+	[ ! -e $workingDir/publicVars ] && echo -e "\nCreating variable file..."; echo "BACKUPDIR=$BACKUPDIR" > $workingDir/publicVars; echo $'isFirst=true' >> $workingDir/publicVars; echo "isFirstSetup=false" >> $workingDir/publicVars;
+
+	if [[ ! -e $workingDir/incBackup5.tar && ! -e $workingDir/incBackup4.tar && ! -e $workingDir/incBackup3.tar && ! -e $workingDir/incBackup2.tar && ! -e $workingDir/incBackup1.tar ]]; then
+		touch $workingDir/incBackup5.tar; touch $workingDir/incBackup4.tar; touch $workingDir/incBackup3.tar; touch $workingDir/incBackup2.tar; touch $workingDir/incBackup1.tar;
+	else
+		echo $'Backup files found! Will not clobber.\nProceeding to next step...'
+	fi
+
+	echo -e "\nSetting up daemon functionality..."
+	echo "Calling autoBackupDS to handle the daemon setup..."
+	st autoBackupDS >& /dev/null
+	[ "$?" == "2" ] && echo "" && echo $'No files for the daemon will be created.\nTo create and edit the table, just run the autoBackup script again and select the "Customize daemon table" option.'
+#	echo -e "\nCreating symlinks..."
+#	sudo ln -sft /etc/init.d/autoBackupDS autoBackupDS
+#	sudo ln -sft /etc/rc.d/rc$counter.d/S43autoBackupDS /etc/init.d/autoBackupDS
+#	sudo ln -sft /etc/rc.d/rc$counter.d/K43autoBackupDS /etc/init.d/autoBackupDS
+# Would you like to run the autoBackup script? [Y/n]"
+#	read runBackup
+#	if [[ ! $runBackup == "n" || $runBackup == "no" ]]; then
+#		if [ -e $workingDir/autoBackup ]; then { autoBackup >> $workingDir/backupLog; } else { echo "ERROR: Can not start autoBackup script. Is it in this directory?"; } fi
+#	else
+#		echo "Exiting..."
+#	fi
+fi
+
+if [ $changeDir == "true" ]; then
+	echo -e "\nExporting directory for backup..."
+	tail -n 2 $workingDir/publicVars > temp && echo "BACKUPDIR=\"$BACKUPDIR\"" > $workingDir/publicVars && cat $workingDir/publicVars temp > temp0 && rm -f temp && cat temp0 > $workingDir/publicVars && rm -f temp0
+	[ $isFirstSetup == "true" ] && echo "Setup complete."
+fi

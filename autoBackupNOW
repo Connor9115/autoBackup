@@ -1,0 +1,51 @@
+#!/bin/bash
+# Version information
+ver="1.0"
+exVer=$(
+	echo "$ver - Major version. Release notes:"
+	echo $'\t+ Made the backup process it\'s own module'
+	echo $'\t+ '
+)
+
+# Here we create our global variables (variables (vars) that can be used all throughout the script)
+# This first var just finds what directory (dir) it's in and adds the following text to it
+vne="false"
+verbose="false"
+
+while getopts vV option
+do
+	case "${option}"
+	in
+		v) vne="true";;
+		V) verbose="true";;
+	esac
+done
+
+# Check if module was called with either version info optarg
+if [ $vne == "true" ]; then
+	[ $verbose == "false" ] && echo -e "$ver"
+	[ $verbose == "true" ] && echo -e "$exVer"
+	exit
+fi
+
+if [[ "$backupType" == "INCR" && "$BACKUPDIR" != "" ]]; then
+	# Incremental
+	tar -cvvg $workingDir/metaBackup.snar -f $workingDir/incBackup1.tar $BACKUPDIR >> $workingDir/backupLog
+fi
+
+if [[ "$backupType" == "FULL" && "$BACKUPDIR" != "" ]]; then
+	# Full
+	tar -cvvpzf $workingDir/fullBackup1.tar $BACKUPDIR >> $workingDir/backupLog
+fi
+
+if [[ "$backupType" == "FULL" && "$BACKUPDIR" == "" ]]; then
+	# Full - When backup path is not provided
+	tar -cvvpzf $workingDir/fullBackup1.tar $HOME >> $workingDir/backupLog
+fi
+
+if [[ "$backupType" == "INCR" && "$BACKUPDIR" == "" ]]; then
+	# Incremental - When backup path is not provided
+	tar -cvvg $workingDir/metaBackup.snar -f $workingDir/incBackup1.tar $HOME >> $workingDir/backupLog
+fi
+
+# sudo tar -cvpzf fullBackup1.tar --exclude=/backup.tar.gz --one-file-system / >> $workingDir/backupLog
