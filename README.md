@@ -17,7 +17,15 @@ If the user opts to not run the setup script when prompted the main script will 
 Please forgive the awful comments, this script was meant to be read by people without much knowledge of shell scripting.
 
 ## Version info
-All the script's modules have version info attached. This can be accessed by using the command. "autoBackup -v" for the version number or "autoBackup -vV" for the version number plus release notes.
+All the script's modules have version info attached. This can be accessed by using the command 
+
+./autoBackup -v
+
+for the version number or
+
+./autoBackup -vV
+
+for the version number plus release notes.
 
 ## OptArgs
 The script only uses three optargs, they are the following:
