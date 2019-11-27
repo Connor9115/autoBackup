@@ -27,6 +27,9 @@ or
 
 for the version number plus release notes.
 
+## Multiple instances
+The script will not allow more then one instance of itself at a time.
+
 ## OptArgs
 The script only uses three optargs, they are the following:
 + -v
@@ -34,11 +37,8 @@ The script only uses three optargs, they are the following:
 + -V
 ..* Currently can only be used with -v to display version number and release notes
 + -p
-..* Requires an integer argument after it. This can be used to bypass the main menu and get to the option you actually want by inputting the number that corrisponds with the menu option you want, an example of this follows:
+..* Requires an integer argument after it. This can be used to bypass the main menu and get to the option you actually want by inputting the number that corrisponds with the menu option you want, an example follows:
 
 ./autoBackup -p 99
 
 The above example will open then immediately exit the script.
-
-## Multiple instances
-The script will not allow more then one instance of itself at a time.
