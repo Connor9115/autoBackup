@@ -33,4 +33,4 @@ The script only uses three optargs, they are the following:
 The above example will open then immediately exit the script.
 
 ## Multiple instances
-The script will not allow more then one instance of intself at a time.
+The script will not allow more then one instance of itself at a time.
