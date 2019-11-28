@@ -2,7 +2,7 @@
 name: Feature request
 about: Suggest an idea for this project
 title: "[FEATURE]"
-labels: good first issue
+labels: good first request
 assignees: ''
 
 ---
