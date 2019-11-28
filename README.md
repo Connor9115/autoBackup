@@ -3,6 +3,11 @@ autoBackup is a backup script (who would have thought) that allows the user the 
 
 **WARNING:** After autoBackup creates its cronjobs, DO NOT PUT ANY UNDER IT, instead put your cronjobs above the comments.
 
+## Dependencies
++ tar
++ bc
++ cronie
+
 ## Running the script and setup notes
 To run the setup simply run the script called "autoBackup" (without quotes). To do this follow the proceeding steps:
 1. Enter the directory with the autoBackup scripts and all its modules
