@@ -82,7 +82,7 @@ backupPath="$metaPath/allBackups"
 if [ "$extractMode" == "true" ]; then
 	if [ $firstRun == "true" ]; then
 		storLoc="       Current partition       "
-		[[ $(pwd) == /mnt* || $(pwd) == /dev* ]] && storLoc="   Second drive / partition    "
+		[[ $(pwd) == /mnt* || $(pwd) == /dev* || $(pwd) == /media* ]] && storLoc="   Second drive / partition    "
 		[ ! -e $backupPath/backupLog ] && touch $backupPath/backupLog
 		echo " \\__________________________________/ \\_______________________/ \\_____________________________/ \\__________________/" | cat - $backupPath/backupLog > $backupPath/temp && mv $backupPath/temp $backupPath/backupLog
 		echo "|         Date, day, and time        |       Backup type       |       Storage locaction       |      Operation     |" | cat - $backupPath/backupLog > $backupPath/temp && mv $backupPath/temp $backupPath/backupLog

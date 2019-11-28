@@ -58,7 +58,7 @@ function save {
 	do
 		declare -n day=${allDays[$count]}
 		if [ "${day[0]}" == "*" ]; then
-			crontab -l > tempCron && echo "0 ${day[1]} * * $count export workingDir=$(pwd)/allBackups && $(pwd)/autoBackupd &> $(pwd)/allBackups/cronBU.log" | cat tempCron - | crontab - && rm -rf tempCron
+			crontab -l > tempCron && echo "0 ${day[1]} * * $count export workingDir=$(pwd)/allBackups && $(pwd)/autoBackupd" | cat tempCron - | crontab - && rm -rf tempCron
 		fi
 		let count++
 	done

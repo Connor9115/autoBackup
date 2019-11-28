@@ -81,8 +81,8 @@ function backupNlog {
 	echo "$logText" >> $workingDir/backupLog
 	if [ $BACKUPDIR != "NA" ]; then
 		echo $'Dirs and files backed up:' >> $workingDir/backupLog
-		[[ "${day[2]}" == "F" && "$backupType" == "" ]] && backupType="FULL"
-		[[ "${day[2]}" == "I" && "$backupType" == "" ]] && backupType="INCR"
+		[[ "${day[2]}" == "F" && "$backupType" == " NA " ]] && backupType="FULL"
+		[[ "${day[2]}" == "I" && "$backupType" == " NA " ]] && backupType="INCR"
 		[ "$backupType" != " NA " ] && export backupType
 		[ "$backupType" == " NA " ] && echo "ERROR: No backup type provided from daemon table! CANNOT PROCEED!" >> $workingDir/backupLog && exit 1
 		[ "$BACKUPDIR" != "" ] && export BACKUPDIR && export workingDir
@@ -106,7 +106,7 @@ function backupNlog {
 	echo "BACKUP LOG END" >> $workingDir/backupLog
 
 	storLoc="       Current partition       "
-	if [[ $workingDir/.. == /mnt* || $workingDir/.. == /dev* ]]; then { storLoc="   Second drive / partition    "; } fi
+	if [[ $workingDir/.. == /mnt* || $workingDir/.. == /dev* || $workingDir/.. == /media* ]]; then { storLoc="   Second drive / partition    "; } fi
 	if [ "$isFirstDaemon" == "true" ]; then
 		echo " \\__________________________________/ \\_______________________/ \\_____________________________/ \\__________________/" | cat - $workingDir/backupLog > temp && mv temp $workingDir/backupLog
 		echo "|         Date, day, and time        |       Backup type       |       Storage locaction       |      Operation     |" | cat - $workingDir/backupLog > temp && mv temp $workingDir/backupLog
