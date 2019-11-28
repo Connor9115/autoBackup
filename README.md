@@ -47,5 +47,8 @@ The script only uses three optargs, they are the following:
 The above example will open then immediately exit the script.
 
 ## Bug reports / Feature requests etc.
-**FYI:** Spelling/grammer errors are considered a mid-level (2) issue
+**FYI:** 
++ Spelling/grammer errors are considered a mid-level (2) issue
++ Problems/features affecting or improving ease-of-use should be described as such in the report
+
 Please also read the feeature_request.md and bug_report.md files.
