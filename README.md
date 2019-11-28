@@ -13,6 +13,9 @@ To run the setup simply run the script called "autoBackup" (without quotes). To 
 The autoBackupSetup script should NOT be run manually, you will be prompted to run it if you run the autoBackup script.
 If the user opts to not run the setup script when prompted the main script will still function, but will fallback on backing up the user's home directory.
 
+## Interface
+autoBackup is controlled by a CLI in a way that has been made as simple as possible to learn.
+
 ## Multiple instances
 The script will not allow more then one instance of itself at a time.
 
@@ -42,3 +45,7 @@ The script only uses three optargs, they are the following:
 ./autoBackup -p 99
 
 The above example will open then immediately exit the script.
+
+## Bug reports / Feature requests etc.
+**FYI:** Spelling/grammer errors are considered a mid-level (2) issue
+Please also read the feeature_request.md and bug_report.md files.
