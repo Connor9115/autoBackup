@@ -6,7 +6,7 @@ exVer=$(
 	echo $'\t+ Added feature to recreate "base" incremental at every 5th backup'
 	echo $'\t+ Now starts from cron, not init'
 	echo $'\t+ Fixed issue where automatic backups would create rogue files'
-	echo $'\t+ Fixed issue where automatic backups wouldn\'t actually backup anything'
+	echo $'\t+ Fixed issue where automatic backups wouldn\'t actually backup anything, again'
 )
 
 # FINALLY FIXED THE ISSUE WHERE AUTO-BACKUPS WOULDN'T BACKUP ANYTHING, turned out to be a problem with variable calls/exports in various areas
