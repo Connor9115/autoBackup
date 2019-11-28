@@ -47,7 +47,9 @@ The script only uses three optargs, they are the following:
 The above example will open then immediately exit the script.
 
 ## Bug reports / Feature requests etc.
-Please read the feeature_request.md and bug_report.md files.
+Please read the feeature_request.md and bug_report.md files, these can be found in the following directory:
+
+.github/ISSUE_TEMPLATE
 
 **FYI:** 
 + Spelling/grammer errors are considered a mid-level (2) issue
