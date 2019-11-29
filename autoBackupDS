@@ -8,6 +8,8 @@ exVer=$(
 	echo $'\t+ Added help text to "DAY->OPTION->TIME: " prompt'
 	echo $'\t+ Added a line to display whether the user has autoBackup cronjobs installed or not'
 	echo $'\t+ Added "save" option to "DAY: " prompt and updated help text to include it'
+	echo $'\t+ Can now view crontab from autoBackupDS using the "cron" command-'
+	echo $'\t+ Updated "DAY: " prompt\'s help text. to include the new "cron" command'
 )
 
 # Creating global vars and reading in var files
@@ -264,11 +266,15 @@ do
 		SAVE)
 			save
 			;;
+		CRON)
+			crontab -l | less +r
+			;;
 		HELP)
 			helpTextGeneral=$(
 				echo $'Possible inputs:'
 				echo $'\t<day of the week> - Load a day (Mon-Sun) for changes'
 				echo $'\tall - Load all days for changes'
+				echo $'\tcron - View your current crontab'
 				echo $'\tsave - Writes the currently buffered daemon table to the daemon table\'s file and install new crontab'
 				echo $'\tdone - Will exit the script, writing any changes to the daemon table\'s file and install new crontab'
 				echo $'\texit - Will exit the script, will NOT write any changes to the daemon table\'s file or crontab'
