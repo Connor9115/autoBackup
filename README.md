@@ -41,11 +41,11 @@ for the version number plus release notes.
 ## OptArgs
 The script only uses three optargs, they are the following:
 + -v
-..* Prints the version number to stdout
+  + Prints the version number to stdout
 + -V
-..* Currently can only be used with -v to display version number and release notes
+  + Currently can only be used with -v to display version number and release notes
 + -p
-..* Requires an integer argument after it. This can be used to bypass the main menu and get to the option you actually want by inputting the number that corrisponds with the menu option you want, an example follows:
+  + Requires an integer argument after it. This can be used to bypass the main menu and get to the option you actually want by inputting the number that corrisponds with the menu option you want, an example follows:
 
 ./autoBackup -p 99
 
