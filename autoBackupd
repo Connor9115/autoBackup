@@ -1,12 +1,9 @@
 #!/bin/bash
-ver="1.1"
+ver="1.0.1"
 exVer=$(
-	echo "$ver - Major version. Release notes:"
-	echo $'\t+ Elapsed time now in millieseconds (instead of seconds)'
-	echo $'\t+ Added feature to recreate "base" incremental at every 5th backup'
-	echo $'\t+ Now starts from cron, not init'
-	echo $'\t+ Fixed issue where automatic backups would create rogue files'
-	echo $'\t+ Fixed issue where automatic backups wouldn\'t actually backup anything, again'
+	echo "$ver - Release notes:"
+	echo $'\t+ Version numbers now use MAJOR.MINOR.PATCH'
+	echo $'\t+ ALL VERSION NUMBERS WILL BE RESET TO 1.0.1'
 )
 
 # FINALLY FIXED THE ISSUE WHERE AUTO-BACKUPS WOULDN'T BACKUP ANYTHING, turned out to be a problem with variable calls/exports in various areas

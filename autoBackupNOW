@@ -1,10 +1,10 @@
 #!/bin/bash
 # Version information
-ver="1.0"
+ver="1.0.1"
 exVer=$(
-	echo "$ver - Major version. Release notes:"
-	echo $'\t+ Made the backup process it\'s own module'
-	echo $'\t+ '
+	echo "$ver - Release notes:"
+	echo $'\t+ Version numbers now use MAJOR.MINOR.PATCH'
+	echo $'\t+ ALL VERSION NUMBERS WILL BE RESET TO 1.0.1'
 )
 
 # Here we create our global variables (variables (vars) that can be used all throughout the script)

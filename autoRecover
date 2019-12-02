@@ -7,10 +7,12 @@
 # V mode: Print version info. If verbose is called with it, it will print extended info including a todo list
 # v mode: Verbose mode. You know what this does
 
-# TODO: Have a way to auto turn first run mode off (using publicVars)
-
-ver='1.1'
-exVer="$ver - First working major version with all necessary features. Release Notes:\\n\\t+ Fixed detection of the current partion\\n\\t+ Added comments to code"
+ver="1.0.1"
+exVer=$(
+	echo "$ver - Release notes:"
+	echo $'\t+ Version numbers now use MAJOR.MINOR.PATCH'
+	echo $'\t+ ALL VERSION NUMBERS WILL BE RESET TO 1.0.1'
+)
 
 # Global var creation
 vne="false"

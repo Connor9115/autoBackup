@@ -2,8 +2,12 @@
 # if [ "$EUID" -ne "0" ]; then { echo "Can not start script because of permission errors. Are you running as root?"; exit; } fi
 # ^ That is the legacy way of handling root permissions (for startup file creation, init)
 
-ver="1.0"
-exVer="$ver - Major version now uses cronjobs (cronie) instead of init (no more sudo prompts) and therefore autoBackupd is no longer a daemon..\n\t..the vars, names, etc. that referrence daemon functionality shall be kept the same as changing them would do more harm than good."
+ver="1.0.1"
+exVer=$(
+	echo "$ver - Release notes:"
+	echo $'\t+ Version numbers now use MAJOR.MINOR.PATCH'
+	echo $'\t+ ALL VERSION NUMBERS WILL BE RESET TO 1.0.1'
+)
 
 debugVer="true"
 workingDir="$(pwd)/allBackups"

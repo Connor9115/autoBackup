@@ -1,15 +1,11 @@
 #!/bin/bash
 # Time is always "o'clock" e.g. the user enters in 16 for 4:00pm
 
-ver="1.0"
+ver="1.0.1"
 exVer=$(
-	echo "$ver - Major version. Release notes:"
-	echo $'\t+ Added comments'
-	echo $'\t+ Added help text to "DAY->OPTION->TIME: " prompt'
-	echo $'\t+ Added a line to display whether the user has autoBackup cronjobs installed or not'
-	echo $'\t+ Added "save" option to "DAY: " prompt and updated help text to include it'
-	echo $'\t+ Can now view crontab from autoBackupDS using the "cron" command-'
-	echo $'\t+ Updated "DAY: " prompt\'s help text. to include the new "cron" command'
+	echo "$ver - Release notes:"
+	echo $'\t+ Version numbers now use MAJOR.MINOR.PATCH'
+	echo $'\t+ ALL VERSION NUMBERS WILL BE RESET TO 1.0.1'
 )
 
 # Creating global vars and reading in var files

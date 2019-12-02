@@ -5,13 +5,11 @@
 # ALL MODULES ARE READY FOR UPLOAD TO GITHUB
 
 # Version information
-ver="1.0"
+ver="1.0.1"
 exVer=$(
-	echo "$ver - Major version. Release notes:"
-	echo $'\t+ Use of modules has made the whole setup and usage process far easier'
-	echo $'\t+ Can no longer run more then one instance of autoBackup at a time to avoid var collisions etc.'
-	echo $'\t+ Added small changes to strings to improve readability'
-	echo $'\t+ Can now read backup log file, remove autoBackup cronjobs, delete config files/backups, and manage (extract or list) your backups all from within the script'
+	echo "$ver - Release notes:"
+	echo $'\t+ Version numbers now use MAJOR.MINOR.PATCH'
+	echo $'\t+ ALL VERSION NUMBERS WILL BE RESET TO 1.0.1'
 )
 
 # Here we create our global variables (variables (vars) that can be used all throughout the script)
