@@ -1,37 +1,61 @@
-## Welcome to GitHub Pages
+# Description
+autoBackup is a backup script (who would have thought) that allows the user the ability to backup on certain days/times. It uses cronjobs to acomplish this. It is written in BASH and designed for *nix.
 
-You can use the [editor on GitHub](https://github.com/Connor9115/autoBackup/edit/master/docs/index.md) to maintain and preview the content for your website in Markdown files.
+**WARNING:** After autoBackup creates its cronjobs, DO NOT PUT ANY UNDER IT, instead put your cronjobs above the comments.
 
-Whenever you commit to this repository, GitHub Pages will run [Jekyll](https://jekyllrb.com/) to rebuild the pages in your site, from the content in your Markdown files.
+## Dependencies
++ tar
++ bc
++ cronie
 
-### Markdown
+## Running the script and setup notes
+To run the setup simply run the script called "autoBackup" (without quotes). To do this follow the proceeding steps:
+1. Enter the directory with the autoBackup scripts and all its modules
+2. Use the following command to run it 
 
-Markdown is a lightweight and easy-to-use syntax for styling your writing. It includes conventions for
+./autoBackup
 
-```markdown
-Syntax highlighted code block
+The autoBackupSetup script should NOT be run manually, you will be prompted to run it if you run the autoBackup script.
+If the user opts to not run the setup script when prompted the main script will still function, but will fallback on backing up the user's home directory.
 
-# Header 1
-## Header 2
-### Header 3
+## Interface
+autoBackup is controlled by a CLI in a way that has been made as simple as possible to learn.
 
-- Bulleted
-- List
+## Multiple instances
+The script will not allow more then one instance of itself at a time.
 
-1. Numbered
-2. List
+## Code Comments
+Please forgive the awful comments, this script was meant to be read by people without much knowledge of shell scripting.
 
-**Bold** and _Italic_ and `Code` text
+## Version info
+All the script's modules have version info attached. This can be accessed by using the command 
 
-[Link](url) and ![Image](src)
-```
+./autoBackup -v
 
-For more details see [GitHub Flavored Markdown](https://guides.github.com/features/mastering-markdown/).
+or
 
-### Jekyll Themes
+./autoBackup -vV
 
-Your Pages site will use the layout and styles from the Jekyll theme you have selected in your [repository settings](https://github.com/Connor9115/autoBackup/settings/pages). The name of this theme is saved in the Jekyll `_config.yml` configuration file.
+for the version number plus release notes.
 
-### Support or Contact
+## OptArgs
+The script only uses three optargs, they are the following:
++ -v
+  + Prints the version number to stdout
++ -V
+  + Currently can only be used with -v to display version number and release notes
++ -p
+  + Requires an integer argument after it. This can be used to bypass the main menu and get to the option you actually want by inputting the number that corrisponds with the menu option you want, an example follows:
 
-Having trouble with Pages? Check out our [documentation](https://docs.github.com/categories/github-pages-basics/) or [contact support](https://support.github.com/contact) and we’ll help you sort it out.
+./autoBackup -p 99
+
+The above example will open then immediately exit the script.
+
+## Bug reports / Feature requests etc.
+Please read the feature_request.md and bug_report.md files, these can be found in the following directory:
+
+.github/ISSUE_TEMPLATE
+
+**FYI:** 
++ Spelling/grammer errors are considered a mid-level (2) issue
++ Problems/features affecting or improving ease-of-use should be described as such in the report
