@@ -1,5 +1,5 @@
 # EDIT
-Excuse me, one day I was eating spaghetti and a bit of it got on my code. I initially made this for a class when we were told to "give recommendations of an backup program" so my smartass cooked up this in 15 minutes. Over time however it got a bit out of hand and turned into what you see here.
+Excuse me, one day I was eating spaghetti and a bit of it got on my code. I initially made this for a class when we were told to "give recommendations of an backup manager" so my smartass cooked up this in 15 minutes. Over time however it got a bit out of hand and turned into what you see here.
 
 ## Original README
 # Description
