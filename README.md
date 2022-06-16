@@ -1,7 +1,7 @@
 # EDIT
 Excuse me, one day I was eating spaghetti and a bit of it got on my code. I initially made this for a class when we were told to "give recommendations of an antivirus" so my smartass cooked up this in 15 minutes. Over time however it got a bit out of hand and turned into what you see here.
 
-# Original README
+## Original README
 # Description
 autoBackup is a backup script (who would have thought) that allows the user the ability to backup on certain days/times. It uses cronjobs to acomplish this. It is written in BASH and designed for *nix.
 
